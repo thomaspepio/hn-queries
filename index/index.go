@@ -6,9 +6,8 @@ import (
 
 	"github.com/thomaspepio/hn-queries/avltree"
 	"github.com/thomaspepio/hn-queries/parser"
+	"github.com/thomaspepio/hn-queries/util"
 )
-
-type URLId = int
 
 // KeysTriple represents a 3-uple of keys
 // With an input of : 2021-01-17,
@@ -19,12 +18,17 @@ type KeysTriple struct {
 	YearMonthDay int
 }
 
+// URLId : type alias for int
+type URLId = int
+
+// Index : a datastructure to deduplicate URLs and index them by year, year-month and year-month-day
 type Index struct {
 	Sequence int
 	URLs     map[string]URLId
 	Tree     *avltree.AVLTree
 }
 
+// EmptyIndex : creates an empty index
 func EmptyIndex() *Index {
 	var emptyTree *avltree.AVLTree
 	return &Index{0, make(map[string]int), emptyTree}
@@ -76,28 +80,36 @@ func KeysFrom(parsedQuery *parser.ParsedQuery) (*KeysTriple, error) {
 	}
 
 	year := extractYearKey(parsedQuery)
-	yearMonth := extractYearMonthKey(parsedQuery)
-	yearMonthDay := extractYearMonthDayKey(parsedQuery)
+
+	yearMonth, yearMonthError := extractYearMonthKey(parsedQuery)
+	if yearMonthError != nil {
+		return nil, yearMonthError
+	}
+
+	yearMonthDay, yearMonthDayError := extractYearMonthDayKey(parsedQuery)
+	if yearMonthDayError != nil {
+		return nil, yearMonthDayError
+	}
 
 	return &KeysTriple{year, yearMonth, yearMonthDay}, nil
 }
 
 func extractYearKey(parsedQuery *parser.ParsedQuery) int {
-	return parsedQuery.Time.Year() * 10000
+	return util.MakeYearKey(parsedQuery.Time.Year())
 }
 
-func extractYearMonthKey(parsedQuery *parser.ParsedQuery) int {
+func extractYearMonthKey(parsedQuery *parser.ParsedQuery) (int, error) {
 	year := parsedQuery.Time.Year()
-	yearMonthStr := strconv.Itoa(year) + pad(int(parsedQuery.Time.Month()))
-	yearMonth, _ := strconv.Atoi(yearMonthStr)
-	return yearMonth * 100
+	month := int(parsedQuery.Time.Month())
+	return util.MakeYearMonthKey(year, month)
 }
 
-func extractYearMonthDayKey(parsedQuery *parser.ParsedQuery) int {
+func extractYearMonthDayKey(parsedQuery *parser.ParsedQuery) (int, error) {
 	year := parsedQuery.Time.Year()
+	month := int(parsedQuery.Time.Month())
 	day := parsedQuery.Time.Day()
-	yearMonthDay, _ := strconv.Atoi(strconv.Itoa(year) + pad(int(parsedQuery.Time.Month())) + pad(day))
-	return yearMonthDay
+
+	return util.MakeYearMonthDayKey(year, month, day)
 }
 
 func pad(n int) string {
