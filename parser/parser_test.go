@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"net/url"
 	"testing"
 	"time"
 
@@ -11,9 +10,8 @@ import (
 
 func Test_ValidHNQuery_ShouldBeParsed(t *testing.T) {
 	timeParsed, _ := time.Parse(constant.DateFormat, constant.DateAsString)
-	urlParsed, _ := url.Parse(constant.URLAsString)
 
-	expectedQuery := ParsedQuery{timeParsed, *urlParsed}
+	expectedQuery := ParsedQuery{timeParsed, constant.URLAsString}
 	parsedQuery, _ := ParseHNQuery(constant.CorrectLine)
 
 	assert.Equal(t, expectedQuery, *parsedQuery, "A valid HN query should be parsed")

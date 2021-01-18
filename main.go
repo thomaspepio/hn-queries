@@ -1,9 +1,13 @@
 package main
 
 import (
-	"net/http"
+	"bufio"
+	"log"
+	"os"
 
-	"github.com/gin-gonic/gin"
+	"github.com/thomaspepio/hn-queries/endpoint"
+	"github.com/thomaspepio/hn-queries/parser"
+
 	"github.com/thomaspepio/hn-queries/index"
 )
 
@@ -13,22 +17,41 @@ func main() {
 }
 
 func ingestHnLogs() *index.Index {
-	return nil
+	os.Stdout.WriteString("Start indexing...\n")
+	index := index.EmptyIndex()
+
+	//file, err := os.Open("./hn_logs.tsv")
+	file, err := os.Open("./test_data")
+	if err != nil {
+		panic(err.Error())
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parsedQuery, parseError := parser.ParseHNQuery(line)
+
+		if parseError != nil {
+			os.Stdout.WriteString(parseError.Error() + "\n")
+		} else {
+			index.Add(parsedQuery)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	os.Stdout.WriteString("Indexing : OK\n")
+	return index
 }
 
 func startEndpoints(index *index.Index) {
-	router := gin.Default()
+	if index == nil {
+		panic("Could not start server : index is nil")
+	}
 
-	router.GET("/1/queries/count/:datePrefix", func(context *gin.Context) {
-		name := context.Param("datePrefix")
-		context.String(http.StatusOK, "Hello %s", name)
-	})
-
-	router.GET("/1/queries/popular/:datePrefix", func(context *gin.Context) {
-		name := context.Param("datePrefix")
-		size := context.Query("size")
-		context.String(http.StatusOK, "Hello %s %s", name, size)
-	})
-
+	router := endpoint.Router(index)
 	router.Run(":8080")
 }

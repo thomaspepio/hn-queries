@@ -13,15 +13,18 @@ const (
 	Year KeyType = iota
 	Month
 	Day
+	Hour
+	Minute
+	Second
 
-	datePrefixParamFormatYear  = "^[0-9]{4}$"
-	datePrefixParamFormatMonth = "^[0-9]{4}-[0-9]{1,2}$"
-	datePrefixParamFormathDay  = "^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}$"
+	yearFormat  = "^[0-9]{4}$"
+	monthFormat = "^[0-9]{4}-[0-9]{1,2}$"
+	dayFormat   = "^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}$"
 )
 
-var regexpYear = regexp.MustCompile(datePrefixParamFormatYear)
-var regexpMonth = regexp.MustCompile(datePrefixParamFormatMonth)
-var regexpDay = regexp.MustCompile(datePrefixParamFormathDay)
+var regexpYear = regexp.MustCompile(yearFormat)
+var regexpMonth = regexp.MustCompile(monthFormat)
+var regexpDay = regexp.MustCompile(dayFormat)
 
 func IdentifyKey(key string) (KeyType, error) {
 	if regexpYear.MatchString(key) {
@@ -40,38 +43,38 @@ func IdentifyKey(key string) (KeyType, error) {
 }
 
 // YearKey : makes a search key for a whole year
-// Year = 2021 => Key = 20210000
-func YearKey(yearStr string) (int, error) {
-	year, err := strconv.Atoi(yearStr)
-
-	if err != nil {
-		return 0, err
-	}
-
-	return year * 10000, nil
+func YearKey(yearStr string) int {
+	yearKey, _ := strconv.Atoi(yearStr)
+	return yearKey * 10000000000
 }
 
 // MonthKey : makes a search key for a month in a year
-// Year = 2021, Month = 01 => Key = 20210100
-func MonthKey(year, month string) (int, error) {
+func MonthKey(year, month string) int {
 	yearMonthStr := year + month
-	yearMonth, convError := strconv.Atoi(yearMonthStr)
-
-	if convError != nil {
-		return 0, convError
-	}
-
-	return (yearMonth * 100), nil
+	monthKey, _ := strconv.Atoi(yearMonthStr)
+	return (monthKey * 100000000)
 }
 
 // DayKey : makes a search key for a specific day
-// Year = 2021, Month = 01, Day = 01 => Key = 20210101
-func DayKey(year, month, day string) (int, error) {
-	yearMonthDay, convError := strconv.Atoi(year + month + day)
+func DayKey(year, month, day string) int {
+	dayKey, _ := strconv.Atoi(year + month + day)
+	return (dayKey * 1000000)
+}
 
-	if convError != nil {
-		return 0, convError
-	}
+// HourKey : makes a search key for a specific hour
+func HourKey(year, month, day, hour string) int {
+	hourKey, _ := strconv.Atoi(year + month + day + hour)
+	return (hourKey * 10000)
+}
 
-	return yearMonthDay, nil
+// MinuteKey : makes a search key for a specific minute
+func MinuteKey(year, month, day, hour, minute string) int {
+	minuteKey, _ := strconv.Atoi(year + month + day + hour + minute)
+	return (minuteKey * 100)
+}
+
+// SecondKey : makes a search key for a specific second
+func SecondKey(year, month, day, hour, minute, second string) int {
+	secondKey, _ := strconv.Atoi(year + month + day + hour + minute + second)
+	return secondKey
 }

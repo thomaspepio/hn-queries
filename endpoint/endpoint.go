@@ -25,12 +25,12 @@ const (
 	sizeParam = "size"
 
 	// URLs we support
-	countQueriesURL   = v1queries + "/count:" + datePrefixParam
-	popularQueriesURL = v1queries + "/popular" + datePrefixParam + "?" + sizeParam
+	countQueriesURL   = v1queries + "/count/:" + datePrefixParam
+	popularQueriesURL = v1queries + "/popular/:" + datePrefixParam
 )
 
 // Router : return the endpoints of the application
-func Router(index *index.Index) error {
+func Router(index *index.Index) *gin.Engine {
 	router := gin.Default()
 
 	router.GET(countQueriesURL, func(context *gin.Context) {
@@ -67,11 +67,18 @@ func Router(index *index.Index) error {
 		if topQueriesError != nil {
 			context.JSON(http.StatusInternalServerError, gin.H{"error": "error while computing top quries : " + topQueriesError.Error()})
 		} else {
+			toJson, err := TopQueriesResultToJSON(topQueries)
+
+			if err != nil {
+				context.JSON(http.StatusInternalServerError, gin.H{"error": "error while computing top quries : " + err.Error()})
+			}
+
+			context.JSON(http.StatusOK, toJson)
 			fmt.Println(topQueries)
 		}
 	})
 
-	return nil
+	return router
 }
 
 // CheckSize : checks the validity of the size query paramter

@@ -54,6 +54,32 @@ func (tree *AVLTree) Get(key int) map[int]int {
 	return nil
 }
 
+// Between : returns the subtree with lower <= tree.Key <= higher
+// CAVEAT EMPTOR : the subtree is still referenced by the caller
+// be careful what you change in the subtree.
+func (tree *AVLTree) Between(lower, higher int) *AVLTree {
+	if tree == nil {
+		return nil
+	}
+
+	var newTree *AVLTree
+	if tree.Key >= lower && tree.Key <= higher {
+		newTree = tree
+		newTree.Left = tree.Left.Between(lower, higher)
+		newTree.Right = tree.Right.Between(lower, higher)
+	}
+
+	if tree.Key < lower {
+		return tree.Right.Between(lower, higher)
+	}
+
+	if tree.Key > higher {
+		return tree.Left.Between(lower, higher)
+	}
+
+	return newTree
+}
+
 // Update : when the key is present, replaces it's associated value
 func (tree *AVLTree) Update(key int, values map[int]int) {
 	if tree != nil {

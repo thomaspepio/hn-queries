@@ -9,13 +9,17 @@ import (
 	"github.com/thomaspepio/hn-queries/util"
 )
 
-// KeysTriple represents a 3-uple of keys
-// With an input of : 2021-01-17,
-// the key triple should hold Year=20210000, YearMonth=20210100, YearMonthDay=20210117
-type KeysTriple struct {
-	Year  int
-	Month int
-	Day   int
+// Keys represents the different parts of an index key
+// Input : 2021-01-17 11:22:33
+// Key   : Year=20210000000000, Month=20210100000000, Day=20210117000000
+//		   Hour=20210117110000, Minutes=20210117112200, Seconds=20210117112233
+type IndexKeys struct {
+	Year   int
+	Month  int
+	Day    int
+	Hour   int
+	Minute int
+	Second int
 }
 
 // URLId : type alias for int
@@ -43,7 +47,8 @@ func (index *Index) Add(parsedQuery *parser.ParsedQuery) error {
 		return keysError
 	}
 
-	url := parsedQuery.URL.String()
+	//url := parsedQuery.URL.String()
+	url := parsedQuery.URL
 	urls := index.URLsToID
 	ids := index.IDstoURL
 	urlID, foundURL := urls[url]
@@ -53,76 +58,81 @@ func (index *Index) Add(parsedQuery *parser.ParsedQuery) error {
 		urlID = sequence
 		urls[url] = urlID
 		ids[urlID] = url
-		index.Sequence++
 	}
+	index.Sequence++
 
-	yearPairs := index.Tree.Get(keys.Year)
-	if yearPairs == nil {
+	yearIndex := index.Tree.Get(keys.Year)
+	if yearIndex == nil {
 		index.Tree.Insert(keys.Year, initPairs(urlID))
 	} else {
-		yearPairs[urlID]++
-		index.Tree.Update(keys.Year, yearPairs)
+		yearIndex[urlID]++
+		index.Tree.Update(keys.Year, yearIndex)
 	}
 
-	monthPairs := index.Tree.Get(keys.Month)
-	if monthPairs == nil {
+	monthIndex := index.Tree.Get(keys.Month)
+	if monthIndex == nil {
 		index.Tree.Insert(keys.Month, initPairs(urlID))
 	} else {
-		monthPairs[urlID]++
-		index.Tree.Update(keys.Month, monthPairs)
+		monthIndex[urlID]++
+		index.Tree.Update(keys.Month, monthIndex)
 	}
 
-	dayPairs := index.Tree.Get(keys.Day)
-	if dayPairs == nil {
+	dayIndex := index.Tree.Get(keys.Day)
+	if dayIndex == nil {
 		index.Tree.Insert(keys.Day, initPairs(urlID))
 	} else {
-		dayPairs[urlID]++
-		index.Tree.Update(keys.Month, dayPairs)
+		dayIndex[urlID]++
+		index.Tree.Update(keys.Day, dayIndex)
+	}
+
+	hourIndex := index.Tree.Get(keys.Hour)
+	if hourIndex == nil {
+		index.Tree.Insert(keys.Hour, initPairs(urlID))
+	} else {
+		hourIndex[urlID]++
+		index.Tree.Update(keys.Hour, hourIndex)
+	}
+
+	minuteIndex := index.Tree.Get(keys.Minute)
+	if minuteIndex == nil {
+		index.Tree.Insert(keys.Minute, initPairs(urlID))
+	} else {
+		minuteIndex[urlID]++
+		index.Tree.Update(keys.Minute, minuteIndex)
+	}
+
+	secondIndex := index.Tree.Get(keys.Second)
+	if secondIndex == nil {
+		index.Tree.Insert(keys.Second, initPairs(urlID))
+	} else {
+		secondIndex[urlID]++
+		index.Tree.Update(keys.Second, secondIndex)
 	}
 
 	return nil
 }
 
-// KeysFrom : parses a HN Query into a KeysTriple
-func KeysFrom(parsedQuery *parser.ParsedQuery) (*KeysTriple, error) {
+// KeysFrom : parses a HN Query into a IndexKeys
+func KeysFrom(parsedQuery *parser.ParsedQuery) (*IndexKeys, error) {
 	if parsedQuery == nil {
-		return nil, errors.New("Cannot extrat index keys : no source to parse from")
+		return nil, errors.New("Cannot extract index keys : no source to parse from")
 	}
 
-	year, yearError := extractYearKey(parsedQuery)
-	if yearError != nil {
-		return nil, yearError
-	}
+	time := parsedQuery.Time
+	year := strconv.Itoa(time.Year())
+	month := pad(int(time.Month()))
+	day := pad(time.Day())
+	hour := padZeroableValue(time.Hour())
+	minute := padZeroableValue(time.Minute())
+	second := padZeroableValue(time.Second())
 
-	month, monthError := extractMonthKey(parsedQuery)
-	if monthError != nil {
-		return nil, monthError
-	}
-
-	day, dayError := extractDayKey(parsedQuery)
-	if dayError != nil {
-		return nil, dayError
-	}
-
-	return &KeysTriple{year, month, day}, nil
-}
-
-func extractYearKey(parsedQuery *parser.ParsedQuery) (int, error) {
-	return util.YearKey(strconv.Itoa(parsedQuery.Time.Year()))
-}
-
-func extractMonthKey(parsedQuery *parser.ParsedQuery) (int, error) {
-	year := strconv.Itoa(parsedQuery.Time.Year())
-	month := pad(int(parsedQuery.Time.Month()))
-	return util.MonthKey(year, month)
-}
-
-func extractDayKey(parsedQuery *parser.ParsedQuery) (int, error) {
-	year := strconv.Itoa(parsedQuery.Time.Year())
-	month := pad(int(parsedQuery.Time.Month()))
-	day := pad(parsedQuery.Time.Day())
-
-	return util.DayKey(year, month, day)
+	return &IndexKeys{
+		Year:   util.YearKey(year),
+		Month:  util.MonthKey(year, month),
+		Day:    util.DayKey(year, month, day),
+		Hour:   util.HourKey(year, month, day, hour),
+		Minute: util.MinuteKey(year, month, day, hour, minute),
+		Second: util.SecondKey(year, month, day, hour, minute, second)}, nil
 }
 
 func pad(n int) string {
@@ -131,6 +141,10 @@ func pad(n int) string {
 	}
 
 	return strconv.Itoa(n)
+}
+
+func padZeroableValue(n int) string {
+	return pad(n + 1)
 }
 
 func initPairs(id int) map[int]int {
