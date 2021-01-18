@@ -24,14 +24,15 @@ type URLId = int
 // Index : a datastructure to deduplicate URLs and index them by year, year-month and year-month-day
 type Index struct {
 	Sequence int
-	URLs     map[string]URLId
+	URLsToID map[string]URLId
+	IDstoURL map[URLId]string
 	Tree     *avltree.AVLTree
 }
 
 // EmptyIndex : creates an empty index
 func EmptyIndex() *Index {
-	var emptyTree *avltree.AVLTree
-	return &Index{0, make(map[string]int), emptyTree}
+	almostEmptyTree := avltree.New(-1, make(map[int]int))
+	return &Index{0, make(map[string]int), make(map[int]string), almostEmptyTree}
 }
 
 // Add : indexes a parsed query
@@ -43,31 +44,40 @@ func (index *Index) Add(parsedQuery *parser.ParsedQuery) error {
 	}
 
 	url := parsedQuery.URL.String()
-	urls := index.URLs
+	urls := index.URLsToID
+	ids := index.IDstoURL
 	urlID, foundURL := urls[url]
 
-	if foundURL {
-		yearPairs := index.Tree.Get(keys.Year)
-		monthPairs := index.Tree.Get(keys.Month)
-		dayPairs := index.Tree.Get(keys.Day)
-
-		yearPairs[urlID]++
-		monthPairs[urlID]++
-		dayPairs[urlID]++
-	} else {
+	if !foundURL {
 		sequence := index.Sequence
-		urlID := sequence
-		sequence++
+		urlID = sequence
 		urls[url] = urlID
+		ids[urlID] = url
+		index.Sequence++
+	}
 
-		if index.Tree == nil {
-			index.Tree = avltree.New(keys.Year, initPairs(urlID))
-		} else {
-			index.Tree.Insert(keys.Year, initPairs(urlID))
-		}
+	yearPairs := index.Tree.Get(keys.Year)
+	if yearPairs == nil {
+		index.Tree.Insert(keys.Year, initPairs(urlID))
+	} else {
+		yearPairs[urlID]++
+		index.Tree.Update(keys.Year, yearPairs)
+	}
 
+	monthPairs := index.Tree.Get(keys.Month)
+	if monthPairs == nil {
 		index.Tree.Insert(keys.Month, initPairs(urlID))
+	} else {
+		monthPairs[urlID]++
+		index.Tree.Update(keys.Month, monthPairs)
+	}
+
+	dayPairs := index.Tree.Get(keys.Day)
+	if dayPairs == nil {
 		index.Tree.Insert(keys.Day, initPairs(urlID))
+	} else {
+		dayPairs[urlID]++
+		index.Tree.Update(keys.Month, dayPairs)
 	}
 
 	return nil
