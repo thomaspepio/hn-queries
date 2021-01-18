@@ -13,9 +13,9 @@ import (
 // With an input of : 2021-01-17,
 // the key triple should hold Year=20210000, YearMonth=20210100, YearMonthDay=20210117
 type KeysTriple struct {
-	Year         int
-	YearMonth    int
-	YearMonthDay int
+	Year  int
+	Month int
+	Day   int
 }
 
 // URLId : type alias for int
@@ -44,16 +44,16 @@ func (index *Index) Add(parsedQuery *parser.ParsedQuery) error {
 
 	url := parsedQuery.URL.String()
 	urls := index.URLs
-	_, foundURL := urls[url]
+	urlID, foundURL := urls[url]
 
 	if foundURL {
-		yearPair := index.Tree.Get(keys.Year)
-		yearMonthPair := index.Tree.Get(keys.YearMonth)
-		yearMonthDayPair := index.Tree.Get(keys.YearMonthDay)
+		yearPairs := index.Tree.Get(keys.Year)
+		monthPairs := index.Tree.Get(keys.Month)
+		dayPairs := index.Tree.Get(keys.Day)
 
-		yearPair.Count++
-		yearMonthPair.Count++
-		yearMonthDayPair.Count++
+		yearPairs[urlID]++
+		monthPairs[urlID]++
+		dayPairs[urlID]++
 	} else {
 		sequence := index.Sequence
 		urlID := sequence
@@ -61,13 +61,13 @@ func (index *Index) Add(parsedQuery *parser.ParsedQuery) error {
 		urls[url] = urlID
 
 		if index.Tree == nil {
-			index.Tree = avltree.New(keys.Year, newPair(urlID))
+			index.Tree = avltree.New(keys.Year, initPairs(urlID))
 		} else {
-			index.Tree.Insert(keys.Year, newPair(urlID))
+			index.Tree.Insert(keys.Year, initPairs(urlID))
 		}
 
-		index.Tree.Insert(keys.YearMonth, newPair(urlID))
-		index.Tree.Insert(keys.YearMonthDay, newPair(urlID))
+		index.Tree.Insert(keys.Month, initPairs(urlID))
+		index.Tree.Insert(keys.Day, initPairs(urlID))
 	}
 
 	return nil
@@ -79,37 +79,40 @@ func KeysFrom(parsedQuery *parser.ParsedQuery) (*KeysTriple, error) {
 		return nil, errors.New("Cannot extrat index keys : no source to parse from")
 	}
 
-	year := extractYearKey(parsedQuery)
-
-	yearMonth, yearMonthError := extractYearMonthKey(parsedQuery)
-	if yearMonthError != nil {
-		return nil, yearMonthError
+	year, yearError := extractYearKey(parsedQuery)
+	if yearError != nil {
+		return nil, yearError
 	}
 
-	yearMonthDay, yearMonthDayError := extractYearMonthDayKey(parsedQuery)
-	if yearMonthDayError != nil {
-		return nil, yearMonthDayError
+	month, monthError := extractMonthKey(parsedQuery)
+	if monthError != nil {
+		return nil, monthError
 	}
 
-	return &KeysTriple{year, yearMonth, yearMonthDay}, nil
+	day, dayError := extractDayKey(parsedQuery)
+	if dayError != nil {
+		return nil, dayError
+	}
+
+	return &KeysTriple{year, month, day}, nil
 }
 
-func extractYearKey(parsedQuery *parser.ParsedQuery) int {
-	return util.MakeYearKey(parsedQuery.Time.Year())
+func extractYearKey(parsedQuery *parser.ParsedQuery) (int, error) {
+	return util.YearKey(strconv.Itoa(parsedQuery.Time.Year()))
 }
 
-func extractYearMonthKey(parsedQuery *parser.ParsedQuery) (int, error) {
-	year := parsedQuery.Time.Year()
-	month := int(parsedQuery.Time.Month())
-	return util.MakeYearMonthKey(year, month)
+func extractMonthKey(parsedQuery *parser.ParsedQuery) (int, error) {
+	year := strconv.Itoa(parsedQuery.Time.Year())
+	month := pad(int(parsedQuery.Time.Month()))
+	return util.MonthKey(year, month)
 }
 
-func extractYearMonthDayKey(parsedQuery *parser.ParsedQuery) (int, error) {
-	year := parsedQuery.Time.Year()
-	month := int(parsedQuery.Time.Month())
-	day := parsedQuery.Time.Day()
+func extractDayKey(parsedQuery *parser.ParsedQuery) (int, error) {
+	year := strconv.Itoa(parsedQuery.Time.Year())
+	month := pad(int(parsedQuery.Time.Month()))
+	day := pad(parsedQuery.Time.Day())
 
-	return util.MakeYearMonthDayKey(year, month, day)
+	return util.DayKey(year, month, day)
 }
 
 func pad(n int) string {
@@ -120,6 +123,6 @@ func pad(n int) string {
 	return strconv.Itoa(n)
 }
 
-func newPair(id int) avltree.CountingPair {
-	return avltree.CountingPair{id, 1}
+func initPairs(id int) map[int]int {
+	return map[int]int{id: 1}
 }

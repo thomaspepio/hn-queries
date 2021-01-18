@@ -2,56 +2,48 @@ package avltree
 
 type NodeType string
 
+type rebalancingStrategy string
+
 const (
 	Root       NodeType = "root"
-	LeftChild           = "leftChild"
-	RightChild          = "rightChild"
-)
+	LeftChild  NodeType = "leftChild"
+	RightChild NodeType = "rightChild"
 
-// CountingPair : a monomorphised tuple
-type CountingPair struct {
-	Val   int
-	Count int
-}
+	rightRight    rebalancingStrategy = "rightright" // insert at the right side, balance factor >= 2
+	leftleft      rebalancingStrategy = "leftleft"   // insert at the left side, balance factor <= -2
+	rightleft     rebalancingStrategy = "rightleft"  // insert at the right side, balance factor <= -2
+	leftright     rebalancingStrategy = "leftright"  // insert at the left side, balance factor >= 2
+	noRebalancing rebalancingStrategy = "none"
+)
 
 // An AVLTree whose keys are fixed to integers
 type AVLTree struct {
 	Key      int
-	Val      CountingPair
+	Values   map[int]int
 	Left     *AVLTree
 	Right    *AVLTree
 	Parent   *AVLTree
 	NodeType NodeType
 }
 
-type rebalancingStrategy string
-
-const (
-	rightRight    rebalancingStrategy = "rightright" // insert at the right side, balance factor >= 2
-	leftleft                          = "leftleft"   // insert at the left side, balance factor <= -2
-	rightleft                         = "rightleft"  // insert at the right side, balance factor <= -2
-	leftright                         = "leftright"  // insert at the left side, balance factor >= 2
-	noRebalancing                     = "none"
-)
-
 // New returns leafless tree, with height set to 0
-func New(key int, val CountingPair) *AVLTree {
-	return &AVLTree{key, val, nil, nil, nil, Root}
+func New(key int, values map[int]int) *AVLTree {
+	return &AVLTree{key, values, nil, nil, nil, Root}
 }
 
-func newLeftTree(key int, val CountingPair, parent *AVLTree) *AVLTree {
-	return &AVLTree{key, val, nil, nil, parent, LeftChild}
+func newLeftTree(key int, values map[int]int, parent *AVLTree) *AVLTree {
+	return &AVLTree{key, values, nil, nil, parent, LeftChild}
 }
 
-func newRightTree(key int, val CountingPair, parent *AVLTree) *AVLTree {
-	return &AVLTree{key, val, nil, nil, parent, RightChild}
+func newRightTree(key int, values map[int]int, parent *AVLTree) *AVLTree {
+	return &AVLTree{key, values, nil, nil, parent, RightChild}
 }
 
 // Get : lookup a key in the tree
-func (tree *AVLTree) Get(key int) *CountingPair {
+func (tree *AVLTree) Get(key int) map[int]int {
 	if tree != nil {
 		if key == tree.Key {
-			return &tree.Val
+			return tree.Values
 		} else if key < tree.Key {
 			return tree.Left.Get(key)
 		} else if key > tree.Key {
@@ -63,31 +55,31 @@ func (tree *AVLTree) Get(key int) *CountingPair {
 }
 
 // Update : when the key is present, replaces it's associated value
-func (tree *AVLTree) Update(key int, val CountingPair) {
+func (tree *AVLTree) Update(key int, values map[int]int) {
 	if tree != nil {
 		if key == tree.Key {
-			tree.Val = val
+			tree.Values = values
 		} else if key < tree.Key {
-			tree.Left.Update(key, val)
+			tree.Left.Update(key, values)
 		} else if key > tree.Key {
-			tree.Right.Update(key, val)
+			tree.Right.Update(key, values)
 		}
 	}
 }
 
 // Insert : self balancing insertion
-func (tree *AVLTree) Insert(key int, val CountingPair) {
+func (tree *AVLTree) Insert(key int, values map[int]int) {
 	if key < tree.Key {
 		if tree.Left == nil {
-			tree.Left = newLeftTree(key, val, tree)
+			tree.Left = newLeftTree(key, values, tree)
 		} else {
-			tree.Left.Insert(key, val)
+			tree.Left.Insert(key, values)
 		}
 	} else if key > tree.Key {
 		if tree.Right == nil {
-			tree.Right = newRightTree(key, val, tree)
+			tree.Right = newRightTree(key, values, tree)
 		} else {
-			tree.Right.Insert(key, val)
+			tree.Right.Insert(key, values)
 		}
 	}
 
