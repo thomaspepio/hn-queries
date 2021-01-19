@@ -35,12 +35,7 @@ func CountURLs(index *index.Index, datePrefix string, keyType util.KeyType) (int
 		return -1, err
 	}
 
-	countForDate := 0
-	for _, urlCount := range value {
-		countForDate += urlCount
-	}
-
-	return countForDate, nil
+	return len(value), nil
 }
 
 // FindTopNQueries : searches the top n queries for the given couple datePrefix/keyType.
@@ -75,22 +70,42 @@ func PerformSearch(index *index.Index, datePrefix string, keyType util.KeyType) 
 
 	switch keyType {
 	case util.Year:
-		datePrefixAsTime, _ := time.Parse(yearFormat, datePrefix) // TODO tester le cas erreur
+		datePrefixAsTime, parseError := time.Parse(yearFormat, datePrefix)
+
+		if parseError != nil {
+			return nil, errors.New("Could not parse datePrefix : " + datePrefix)
+		}
+
 		key = util.YearKey(datePrefixAsTime)
 		return index.Tree.Get(key), nil
 
 	case util.Month:
-		datePrefixAsTime, _ := time.Parse(monthFormat, datePrefix) // TODO tester le cas erreur
+		datePrefixAsTime, parseError := time.Parse(monthFormat, datePrefix)
+
+		if parseError != nil {
+			return nil, errors.New("Could not parse datePrefix : " + datePrefix)
+		}
+
 		key = util.MonthKey(datePrefixAsTime)
 		return index.Tree.Get(key), nil
 
 	case util.Day:
-		datePrefixAsTime, _ := time.Parse(dayFormat, datePrefix) // TODO tester le cas erreur
+		datePrefixAsTime, parseError := time.Parse(dayFormat, datePrefix)
+
+		if parseError != nil {
+			return nil, errors.New("Could not parse datePrefix : " + datePrefix)
+		}
+
 		key = util.DayKey(datePrefixAsTime)
 		return index.Tree.Get(key), nil
 
 	case util.Minute:
-		lower, _ := time.Parse(minuteFormat, datePrefix) // TODO tester le cas erreur
+		lower, parseError := time.Parse(minuteFormat, datePrefix)
+
+		if parseError != nil {
+			return nil, errors.New("Could not parse datePrefix : " + datePrefix)
+		}
+
 		lowerKey := util.MinuteKey(lower)
 		higherKey := lowerKey + 60
 

@@ -74,7 +74,7 @@ func Test_SearchIndex_SearchDay_ShouldFail(t *testing.T) {
 	assert.Error(t, err, "2015-08-DD is not a valid API parameter")
 }
 
-func Test_ComputeKeyCount(t *testing.T) {
+func Test_ComputeURLCount(t *testing.T) {
 	parsedQuery, _ := parser.ParseHNQuery(constant.CorrectLine)
 	index := index.EmptyIndex()
 	index.Add(parsedQuery)
@@ -84,7 +84,40 @@ func Test_ComputeKeyCount(t *testing.T) {
 
 	index.Add(parsedQuery)
 	value, _ = CountURLs(index, "2015", util.Year)
-	assert.Equal(t, 2, value, "There should be two searches for 2015")
+	assert.Equal(t, 1, value, "The URL count should not have changed")
+}
+
+func Test_BetweenCount(t *testing.T) {
+	// Three distinct URLs from 2021-01-01 00:01:00 to 2021-01-01 00:01:59
+	parsedQuery1, _ := parser.ParseHNQuery("2021-01-01 00:01:00	Foo")
+	parsedQuery2, _ := parser.ParseHNQuery("2021-01-01 00:01:15	Bar")
+	parsedQuery3, _ := parser.ParseHNQuery("2021-01-01 00:01:30	Baz")
+	parsedQuery4, _ := parser.ParseHNQuery("2021-01-01 00:01:45	Foo")
+	parsedQuery5, _ := parser.ParseHNQuery("2021-01-01 00:01:59	Bar")
+
+	// Same three URLs as before, on different minutes
+	parsedQuery6, _ := parser.ParseHNQuery("2021-01-01 00:02:00	Foo")
+	parsedQuery7, _ := parser.ParseHNQuery("2021-01-01 00:03:00	Bar")
+	parsedQuery8, _ := parser.ParseHNQuery("2021-01-01 00:04:00	Baz")
+
+	index := index.EmptyIndex()
+	index.Add(parsedQuery1)
+	index.Add(parsedQuery2)
+	index.Add(parsedQuery3)
+	index.Add(parsedQuery4)
+	index.Add(parsedQuery5)
+	index.Add(parsedQuery6)
+	index.Add(parsedQuery7)
+	index.Add(parsedQuery8)
+
+	value, _ := CountURLs(index, "2021-01-01 00:01", util.Minute)
+	assert.Equal(t, 3, value, "Three urls shoule have been counted for this range")
+
+	value, _ = CountURLs(index, "2021-01-01 00:02", util.Minute)
+	assert.Equal(t, 1, value, "One url shoule have been counted for this range")
+
+	value, _ = CountURLs(index, "2021-01-01 00:03", util.Minute)
+	assert.Equal(t, 1, value, "One url shoule have been counted for this range")
 }
 
 func Test_TopNQueries(t *testing.T) {

@@ -26,12 +26,3 @@ func Test_TopQueryResult_ToJSON(t *testing.T) {
 	asJson, _ := QueryResultToJson(queryResult)
 	assert.Equal(t, "{query:\"foo\",count:1}", asJson, "QueryResult not JSON encoded properly")
 }
-
-func Test_TopQueryResultArray_ToJSON(t *testing.T) {
-	queryResult1 := query.QueryResult{"foo", 1}
-	queryResult2 := query.QueryResult{"bar", 2}
-	queries := []query.QueryResult{queryResult1, queryResult2}
-
-	asJson, _ := TopQueriesResultToJSON(queries)
-	assert.Equal(t, "{queries:[{query:\"foo\",count:1},{query:\"bar\",count:2}]}", asJson, "TopQueriesResult not JSON encoded propertly")
-}

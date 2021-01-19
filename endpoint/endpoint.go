@@ -65,13 +65,7 @@ func Router(index *index.Index) *gin.Engine {
 			if topQueriesError != nil {
 				context.JSON(http.StatusInternalServerError, gin.H{"error": "error while computing top queries : " + topQueriesError.Error()})
 			} else {
-				toJson, err := TopQueriesResultToJSON(topQueries)
-
-				if err != nil {
-					context.JSON(http.StatusInternalServerError, gin.H{"error": "error while computing top queries : " + err.Error()})
-				}
-
-				context.JSON(http.StatusOK, toJson)
+				context.JSON(http.StatusOK, gin.H{"queries": topQueries})
 			}
 		}
 	})
@@ -87,34 +81,6 @@ func CheckSize(size string) (int, error) {
 	}
 
 	return n, nil
-}
-
-// TopQueriesResultToJSON : converts a []query.QueryResult to a JSON string
-func TopQueriesResultToJSON(queryResults []query.QueryResult) (string, error) {
-	var sb strings.Builder
-
-	sb.WriteString("{queries:[")
-
-	for _, query := range queryResults[:len(queryResults)-1] {
-		asJSON, err := QueryResultToJson(query)
-
-		if err != nil {
-			return "error", err
-		}
-
-		sb.WriteString(asJSON)
-		sb.WriteString(",")
-	}
-
-	asJSON, err := QueryResultToJson(queryResults[len(queryResults)-1])
-	if err != nil {
-		return "error", err
-	}
-
-	sb.WriteString(asJSON)
-	sb.WriteString("]}")
-
-	return sb.String(), nil
 }
 
 // QueryResult: converts a query.QueryResult to a JSON string

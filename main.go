@@ -24,8 +24,6 @@ func ingestHnLogs() *index.Index {
 	index := index.EmptyIndex()
 
 	file, err := os.Open("./hn_logs.tsv")
-	// file, err := os.Open("./test_data")
-	// file, err := os.Open("./mini_test_data")
 	if err != nil {
 		panic(err.Error())
 	}
