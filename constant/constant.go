@@ -10,6 +10,15 @@ const (
 	// Dash : dash constant
 	Dash = "-"
 
+	// DashRune : dash constant as a rune
+	DashRune = '-'
+
+	// SpaceRune: space constant as a rune
+	SpaceRune = ' '
+
+	// ColonRune : colon constant as a rune
+	ColonRune = ':'
+
 	// DateAsString : example of a HN date as string
 	DateAsString = "2015-08-01 00:03:43"
 

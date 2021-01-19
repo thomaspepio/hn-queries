@@ -2,7 +2,6 @@ package index
 
 import (
 	"errors"
-	"strconv"
 
 	"github.com/thomaspepio/hn-queries/avltree"
 	"github.com/thomaspepio/hn-queries/parser"
@@ -101,13 +100,13 @@ func (index *Index) Add(parsedQuery *parser.ParsedQuery) error {
 		index.Tree.Update(keys.Minute, minuteIndex)
 	}
 
-	secondIndex := index.Tree.Get(keys.Second)
-	if secondIndex == nil {
-		index.Tree.Insert(keys.Second, initPairs(urlID))
-	} else {
-		secondIndex[urlID]++
-		index.Tree.Update(keys.Second, secondIndex)
-	}
+	// secondIndex := index.Tree.Get(keys.Second)
+	// if secondIndex == nil {
+	// 	index.Tree.Insert(keys.Second, initPairs(urlID))
+	// } else {
+	// 	secondIndex[urlID]++
+	// 	index.Tree.Update(keys.Second, secondIndex)
+	// }
 
 	return nil
 }
@@ -119,32 +118,13 @@ func KeysFrom(parsedQuery *parser.ParsedQuery) (*IndexKeys, error) {
 	}
 
 	time := parsedQuery.Time
-	year := strconv.Itoa(time.Year())
-	month := pad(int(time.Month()))
-	day := pad(time.Day())
-	hour := padZeroableValue(time.Hour())
-	minute := padZeroableValue(time.Minute())
-	second := padZeroableValue(time.Second())
-
 	return &IndexKeys{
-		Year:   util.YearKey(year),
-		Month:  util.MonthKey(year, month),
-		Day:    util.DayKey(year, month, day),
-		Hour:   util.HourKey(year, month, day, hour),
-		Minute: util.MinuteKey(year, month, day, hour, minute),
-		Second: util.SecondKey(year, month, day, hour, minute, second)}, nil
-}
-
-func pad(n int) string {
-	if n < 10 {
-		return "0" + strconv.Itoa(n)
-	}
-
-	return strconv.Itoa(n)
-}
-
-func padZeroableValue(n int) string {
-	return pad(n + 1)
+		Year:   util.YearKey(time),
+		Month:  util.MonthKey(time),
+		Day:    util.DayKey(time),
+		Hour:   util.HourKey(time),
+		Minute: util.MinuteKey(time),
+		Second: util.SecondKey(time)}, nil
 }
 
 func initPairs(id int) map[int]int {

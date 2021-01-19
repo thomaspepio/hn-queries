@@ -35,38 +35,21 @@ func Test_Get_ElementAbsent(t *testing.T) {
 }
 
 func Test_GetBetween_ShouldExclude_OutOfBoundsValues(t *testing.T) {
-	tree := New(0, mapOf(0))
+	tree := New(-1, mapOf(-1))
+	tree.Insert(0, mapOf(0))
 	tree.Insert(1, mapOf(1))
-	tree.Insert(-1, mapOf(-1))
 	tree.Insert(2, mapOf(2))
-	tree.Insert(3, mapOf(3))
-	tree.Insert(4, mapOf(4))
 	tree.Insert(50, mapOf(50))
 
-	actual := tree.Between(0, 5)
+	nodeCountBefore := tree.Count()
+	actual := tree.Between(0, 3)
+	nodeCountAfter := tree.Count()
 
+	assert.True(t, tree != actual, "Between should point to a new tree")
+	assert.Equal(t, nodeCountBefore, nodeCountAfter, "Original tree should not have lost nodes")
 	assert.Equal(t, mapOf(0), actual.Get(0), "Resulting tree should contain key 0")
 	assert.Equal(t, mapOf(1), actual.Get(1), "Resulting tree should contain key 1")
 	assert.Equal(t, mapOf(2), actual.Get(2), "Resulting tree should contain key 2")
-	assert.Equal(t, mapOf(3), actual.Get(3), "Resulting tree should contain key 3")
-}
-
-func Test_GetBetween_ShouldInclude_InBoundValues(t *testing.T) {
-	tree := New(0, mapOf(0))
-	tree.Insert(-1, mapOf(-1))
-	tree.Insert(1, mapOf(1))
-	tree.Insert(2, mapOf(2))
-	tree.Insert(3, mapOf(3))
-	tree.Insert(4, mapOf(4))
-
-	actual := tree.Between(-1, 4)
-
-	assert.Equal(t, mapOf(-1), actual.Get(-1), "Resulting tree should contain key -1")
-	assert.Equal(t, mapOf(0), actual.Get(0), "Resulting tree should contain key 0")
-	assert.Equal(t, mapOf(1), actual.Get(1), "Resulting tree should contain key 1")
-	assert.Equal(t, mapOf(2), actual.Get(2), "Resulting tree should contain key 2")
-	assert.Equal(t, mapOf(3), actual.Get(3), "Resulting tree should contain key 3")
-	assert.Equal(t, mapOf(4), actual.Get(4), "Resulting tree should contain key 3")
 }
 
 func Test_Update_KeyExists(t *testing.T) {

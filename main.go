@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/thomaspepio/hn-queries/endpoint"
 	"github.com/thomaspepio/hn-queries/parser"
@@ -17,17 +19,20 @@ func main() {
 }
 
 func ingestHnLogs() *index.Index {
-	os.Stdout.WriteString("Start indexing...\n")
+	now := time.Now()
+	os.Stdout.WriteString(now.UTC().String() + " - Start indexing...\n")
 	index := index.EmptyIndex()
 
-	//file, err := os.Open("./hn_logs.tsv")
-	file, err := os.Open("./test_data")
+	file, err := os.Open("./hn_logs.tsv")
+	// file, err := os.Open("./test_data")
+	// file, err := os.Open("./mini_test_data")
 	if err != nil {
 		panic(err.Error())
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+	nbIndexed := 0
 	for scanner.Scan() {
 		line := scanner.Text()
 		parsedQuery, parseError := parser.ParseHNQuery(line)
@@ -36,6 +41,7 @@ func ingestHnLogs() *index.Index {
 			os.Stdout.WriteString(parseError.Error() + "\n")
 		} else {
 			index.Add(parsedQuery)
+			nbIndexed++
 		}
 	}
 
@@ -43,7 +49,9 @@ func ingestHnLogs() *index.Index {
 		log.Fatal(err)
 	}
 
-	os.Stdout.WriteString("Indexing : OK\n")
+	now = time.Now()
+	os.Stdout.WriteString(now.UTC().String() + " - Indexing : OK\n")
+	os.Stdout.WriteString(now.UTC().String() + " - " + strconv.Itoa(nbIndexed) + " log lines indexed\n")
 	return index
 }
 

@@ -3,7 +3,6 @@ package endpoint
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -61,20 +60,19 @@ func Router(index *index.Index) *gin.Engine {
 		n, sizeError := CheckSize(size)
 		if sizeError != nil {
 			context.JSON(http.StatusBadRequest, gin.H{"error": sizeError.Error()})
-		}
-
-		topQueries, topQueriesError := query.FindTopNQueries(index, datePrefix, keyType, n)
-		if topQueriesError != nil {
-			context.JSON(http.StatusInternalServerError, gin.H{"error": "error while computing top quries : " + topQueriesError.Error()})
 		} else {
-			toJson, err := TopQueriesResultToJSON(topQueries)
+			topQueries, topQueriesError := query.FindTopNQueries(index, datePrefix, keyType, n)
+			if topQueriesError != nil {
+				context.JSON(http.StatusInternalServerError, gin.H{"error": "error while computing top queries : " + topQueriesError.Error()})
+			} else {
+				toJson, err := TopQueriesResultToJSON(topQueries)
 
-			if err != nil {
-				context.JSON(http.StatusInternalServerError, gin.H{"error": "error while computing top quries : " + err.Error()})
+				if err != nil {
+					context.JSON(http.StatusInternalServerError, gin.H{"error": "error while computing top queries : " + err.Error()})
+				}
+
+				context.JSON(http.StatusOK, toJson)
 			}
-
-			context.JSON(http.StatusOK, toJson)
-			fmt.Println(topQueries)
 		}
 	})
 

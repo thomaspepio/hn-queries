@@ -2,8 +2,10 @@ package util
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/thomaspepio/hn-queries/constant"
 )
 
 func Test_IdentifyKey_ShouldIdentifyYear(t *testing.T) {
@@ -12,19 +14,18 @@ func Test_IdentifyKey_ShouldIdentifyYear(t *testing.T) {
 }
 
 func Test_IdentifyKey_ShouldIdentifyMonth(t *testing.T) {
-	actualMonth01, _ := IdentifyKey("2021-01")
-	assert.Equal(t, Month, actualMonth01, "Should have identified a month")
-
-	actualMonth12, _ := IdentifyKey("2021-12")
-	assert.Equal(t, Month, actualMonth12, "Should have identified a month")
+	actualMonth, _ := IdentifyKey("2021-01")
+	assert.Equal(t, Month, actualMonth, "Should have identified a month")
 }
 
 func Test_IdentifyKey_ShouldIdentifyDay(t *testing.T) {
-	actualDay01, _ := IdentifyKey("2021-01-01")
-	assert.Equal(t, Day, actualDay01, "Should have identified a day")
+	actualDay, _ := IdentifyKey("2021-01-01")
+	assert.Equal(t, Day, actualDay, "Should have identified a day")
+}
 
-	actualDay27, _ := IdentifyKey("2021-01-27")
-	assert.Equal(t, Day, actualDay27, "Should have identified a day")
+func Test_IdentifyKey_ShouldIdentifyMinute(t *testing.T) {
+	actualMinute, _ := IdentifyKey("2021-01-01 00:01")
+	assert.Equal(t, Minute, actualMinute, "Should have identified a minute")
 }
 
 func Test_IdentifyKey_ShouldFail(t *testing.T) {
@@ -42,31 +43,37 @@ func Test_IdentifyKey_ShouldFail(t *testing.T) {
 }
 
 func Test_YearKey_ShouldSucceed(t *testing.T) {
-	key, _ := YearKey("2015")
+	time, _ := time.Parse(constant.DateFormat, constant.DateAsString)
+	key := YearKey(time)
 	assert.Equal(t, 20150000000000, key, "Key should be 20150000000000")
 }
 
 func Test_MonthKey_ShouldSucceed(t *testing.T) {
-	key, _ := MonthKey("2015", "08")
+	time, _ := time.Parse(constant.DateFormat, constant.DateAsString)
+	key := MonthKey(time)
 	assert.Equal(t, 20150800000000, key, "Key should be 20150800000000")
 }
 
 func Test_DayKey_ShouldSucceed(t *testing.T) {
-	key, _ := DayKey("2015", "08", "01")
+	time, _ := time.Parse(constant.DateFormat, constant.DateAsString)
+	key := DayKey(time)
 	assert.Equal(t, 20150801000000, key, "Key should be 20150801000000")
 }
 
 func Test_HourKey_ShouldSucceed(t *testing.T) {
-	key, _ := HourKey("2015", "08", "01", "01")
+	time, _ := time.Parse(constant.DateFormat, constant.DateAsString)
+	key := HourKey(time)
 	assert.Equal(t, 20150801010000, key, "Key should be 20150801010000")
 }
 
 func Test_MinuteKey_ShouldSucceed(t *testing.T) {
-	key, _ := MinuteKey("2015", "08", "01", "01", "01")
-	assert.Equal(t, 20150801010100, key, "Key should be 20150801010100")
+	time, _ := time.Parse(constant.DateFormat, constant.DateAsString)
+	key := MinuteKey(time)
+	assert.Equal(t, 20150801010400, key, "Key should be 20150801010100")
 }
 
 func Test_SecondKey_ShouldSucceed(t *testing.T) {
-	key, _ := SecondKey("2015", "08", "01", "01", "01", "01")
-	assert.Equal(t, 20150801010101, key, "Key should be 20150801010101")
+	time, _ := time.Parse(constant.DateFormat, constant.DateAsString)
+	key := SecondKey(time)
+	assert.Equal(t, 20150801010444, key, "Key should be 20150801010101")
 }

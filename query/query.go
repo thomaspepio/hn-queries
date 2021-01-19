@@ -3,14 +3,24 @@ package query
 import (
 	"errors"
 	"sort"
-	"strings"
+	"time"
 
+	"github.com/thomaspepio/hn-queries/avltree"
 	"github.com/thomaspepio/hn-queries/constant"
 	"github.com/thomaspepio/hn-queries/index"
 	"github.com/thomaspepio/hn-queries/util"
 )
 
-// Query result : a single query with a count associated
+const (
+	yearFormat   = "2006"
+	monthFormat  = "2006-01"
+	dayFormat    = "2006-01-02"
+	hourFormat   = "2006-01-02 15"
+	minuteFormat = "2006-01-02 15:04"
+	secondFormat = "2006-01-02 15:04:05"
+)
+
+// QueryResult : a single query with a count associated
 type QueryResult struct {
 	Query string `json:"query"`
 	Count int    `json:"count"`
@@ -54,39 +64,59 @@ func FindTopNQueries(index *index.Index, datePrefix string, keyType util.KeyType
 
 	if n > len(queriesForDate) {
 		return queriesForDate, nil
-	} else {
-		return queriesForDate[:n], nil
 	}
+
+	return queriesForDate[:n], nil
 }
 
 // PerformSearch : perform a search on the index
 func PerformSearch(index *index.Index, datePrefix string, keyType util.KeyType) (map[int]int, error) {
 	var key int
-	var keyError error
+
 	switch keyType {
 	case util.Year:
-		key, keyError = util.YearKey(datePrefix)
-
-		if keyError != nil {
-			return nil, errors.New("Error during index search. Caused by : " + keyError.Error())
-		}
+		datePrefixAsTime, _ := time.Parse(yearFormat, datePrefix) // TODO tester le cas erreur
+		key = util.YearKey(datePrefixAsTime)
+		return index.Tree.Get(key), nil
 
 	case util.Month:
-		datePrefixSplitted := strings.Split(datePrefix, constant.Dash)
-		key, keyError = util.MonthKey(datePrefixSplitted[0], datePrefixSplitted[1])
-
-		if keyError != nil {
-			return nil, errors.New("Error during index search. Caused by : " + keyError.Error())
-		}
+		datePrefixAsTime, _ := time.Parse(monthFormat, datePrefix) // TODO tester le cas erreur
+		key = util.MonthKey(datePrefixAsTime)
+		return index.Tree.Get(key), nil
 
 	case util.Day:
-		datePrefixSplitted := strings.Split(datePrefix, constant.Dash)
-		key, keyError = util.DayKey(datePrefixSplitted[0], datePrefixSplitted[1], datePrefixSplitted[2])
+		datePrefixAsTime, _ := time.Parse(dayFormat, datePrefix) // TODO tester le cas erreur
+		key = util.DayKey(datePrefixAsTime)
+		return index.Tree.Get(key), nil
 
-		if keyError != nil {
-			return nil, errors.New("Error during index search. Caused by : " + keyError.Error())
-		}
+	case util.Minute:
+		lower, _ := time.Parse(minuteFormat, datePrefix) // TODO tester le cas erreur
+		lowerKey := util.MinuteKey(lower)
+		higherKey := lowerKey + 60
+
+		treeBetween := index.Tree.Between(lowerKey, higherKey)
+		return mostGeneralTreeValue(treeBetween), nil
 	}
 
-	return index.Tree.Get(key), nil
+	return nil, errors.New("No key was extracted. This is an error")
+}
+
+func splitter(r rune) bool {
+	return r == constant.DashRune || r == constant.SpaceRune || r == constant.ColonRune
+}
+
+func mostGeneralTreeValue(tree *avltree.AVLTree) map[int]int {
+	if tree == nil {
+		return nil
+	}
+
+	var result map[int]int
+
+	if tree.Left == nil {
+		result = tree.Values
+	} else {
+		result = mostGeneralTreeValue(tree.Left)
+	}
+
+	return result
 }
