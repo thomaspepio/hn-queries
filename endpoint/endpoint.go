@@ -37,14 +37,14 @@ func Router(index *index.Index) *gin.Engine {
 
 		keyType, keyTypeError := util.IdentifyKey(datePrefix)
 		if keyTypeError != nil {
-			context.JSON(http.StatusBadRequest, gin.H{"error": "incorrect datePrefix parameter : " + keyTypeError.Error()})
-		}
-
-		count, countError := query.CountURLs(index, datePrefix, keyType)
-		if countError != nil {
-			context.JSON(http.StatusInternalServerError, gin.H{"error": "error while computing URL count : " + countError.Error()})
+			context.JSON(http.StatusBadRequest, gin.H{"error": "Incorrect datePrefix parameter. " + keyTypeError.Error()})
 		} else {
-			context.JSON(http.StatusOK, gin.H{"count": count})
+			count, countError := query.CountURLs(index, datePrefix, keyType)
+			if countError != nil {
+				context.JSON(http.StatusInternalServerError, gin.H{"error": "Error while computing URL count. " + countError.Error()})
+			} else {
+				context.JSON(http.StatusOK, gin.H{"count": count})
+			}
 		}
 	})
 
@@ -63,7 +63,7 @@ func Router(index *index.Index) *gin.Engine {
 		} else {
 			topQueries, topQueriesError := query.FindTopNQueries(index, datePrefix, keyType, n)
 			if topQueriesError != nil {
-				context.JSON(http.StatusInternalServerError, gin.H{"error": "error while computing top queries : " + topQueriesError.Error()})
+				context.JSON(http.StatusInternalServerError, gin.H{"error": "Error while computing top queries. " + topQueriesError.Error()})
 			} else {
 				context.JSON(http.StatusOK, gin.H{"queries": topQueries})
 			}
