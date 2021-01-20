@@ -1,66 +1,77 @@
-# Thought process
+# Home Assignment
 
-### Looking at the data
+### Project manipulation & layout
+
+#### Manipulation
+
+All commands are to be run at the root of the project.
+
+##### Running the tests
+   - with code coverage analysis : `go test --coverprofile=coverage.out ./... && go tool cover -func=coverage.out` 
+   - without code coverage : `go test ./...`
+
+##### Building the project
+`go get && go build`
+
+##### Running the app
+1. copy the `hn_logs.tsv` file at the root of the project
+2. launch the binary : `./hn-queries`
+
+A server should start on `localhost:8080`.
+
+#### Layout
+- _avltree_ : almost complete implementation of an AVL tree (the delete operation is not supported)
+- _constant_ : stores values used across multiple packages
+- _endpoint_ : API endpoints configuration and http parameters management
+- _index_ : main indexing structure
+- _parser_ : typed representation of a log line and its parser
+- _query_ : queries the API supports, the unique call point for endpoints
+- _util_ : utility functions used across multiple packages
+
+### Analysis 
+#### 1. Looking at the data
 A quick glance at `hn_logs.tsv` shows that each line of the file is structured as such : `<YYYY-MM-DD HH:mm:SS><tab><url> `
 
-We choose to not take extra care of any line that would not respect this structure : it will be discarded by any parser we will write.
+We choose to not take extra care of any line that would not respect this structure : it will be discarded by the parser.
 
-### Designing the data structure that will support the API (round 1) : 
+#### 2. Design
 
-   - GET /1/queries/count/<DATE_PREFIX> :
-      - INPUT  : year | year-month | year-month-day
-      - OUTPUT : number of requests
-   
-   - GET /1/queries/popular/<DATE_PREFIX>?size=<SIZE>
-      - INPUTS : year | year-month | year-month-day, size
-      - OUTPUT : list of queries
+- GET /1/queries/count/<DATE_PREFIX> :
+   - INPUT  : year | year-month | year-month-day | year-month-day hour:minute
+   - OUTPUT : number of requests
 
-   - Design :
-     - for the date parameter, three are search patterns : `YYYY`, `YYYY-MM` and `YYYY-MM-DD`. Response time of the APIs should not vary too much whether the search targets a specific day or a whole year.
-     - we know that balanced binary trees offer _O(log n)_ search. Our problem is that we have three different kind of keys. A naïve approach would see us use three kidns of binary trees, one per search pattern, nesting related tree into one another.
-     - this naïve approach seems complicated to implement and to maintain. We can solve this issue by making the three patterns comparable by padding _zeroes_ when necessary (`2020` becomes `20200000`, `202001` becomes `20200100`, `20200101` does not change).
-     - this less naïve approach yields 1095 keys, for each year we want to index (indexing every HN search since it's birth would require 14k keys).
-     - URLs can be deduplicated and referenced by a _primary key_, tree nodes can reference those keys to avoid duplication.
-     - retrieving the Nth most popular querries can be managed by updating query frequency at the node level.
+- GET /1/queries/popular/<DATE_PREFIX>?size=<SIZE>
+   - INPUTS : year | year-month | year-month-day | year-month-day hour:minute, size
+   - OUTPUT : list of queries
 
-Given the following URL log :
-```
-2021-01-14  Foo
-2021-02-01  Bar
-2021-03-01  Foo
-2020-10-28  Baz
-2020-06-01  Foo
-2019-02-10  Bar
-```
+We want both APIs responses time to be fast, whether we search targeting a specific minute or a whole year :
+   - Reading https://www.bigocheatsheet.com/, it's tempting to go for a hashmap be cause it has _O(1)_ average search time. But our APIs supports range searches, which binary search trees are better at.
+   - We choose to go for an AVLTree : because it's a self balancing BST, it offers _O(log n)_ for all scenarios.
+   - Six keys are extracted from a date. For instance, given the date _2015-08-01 00:03:50_, we extract six keys : 
+  
+      | key            | reference                  |
+      | -------------- | -------------------------- |
+      | 20150000000000 | year 2015                  |
+      | 20150800000000 | month 2015-08              |
+      | 20150801000000 | day 2015-08-01             |
+      | 20150801010000 | hour 2015-08-01 00         |
+      | 20150801010400 | minute 2015-08-01 00:03    |
+      | 20150801010451 | second 2015-08-01 00:03:50 |
 
-We extract a deduplicated table of URLs :
-```
-Foo  1
-Bar  2
-Baz  3
-```
+      This design maps each request to a single node in the tree, which should lead to fast response time.
 
-And the following search indexes (examples covering 2021 only ):
-```
-20210000    // the whole 20201 year
-20210100    // january 20201
-20210200    // february 2021
-20210300    // march 2021
-20210114    // jan 14th 2021
-20210201    // etc.
-...
-```
+      _(note that we add 1 to the hour/minute/second to avoid conflicting keys. This preserves the order that exists between dates)_
 
-And use them as keys in the following binary tree :
-```
-                                             (20210300, [(1,1)])
-                                             /                  \
-                          (20210100, [(1, 1)])                   (20210114, [(1, 1)])
-                          /                   \                                      \
-(20210000, [(1, 2), (2, 1)]                    (20210200, [(2, 1)]                    (20210201, [(2, 1)])
-```
+   - This design regarding the key does not invalidate the choice for an AVL Tree : searches are sped up for _"whole"_ intervals (e.g. : the whole 2015 year, a whole month, a whole day, a whole minute...), and look just like hashmap lookups, but ranged searches are still required for _"overlapping"_ intervals<sup>1</sup> (e.g. between 2021-01-01 00:01:30 and 2021-01-03 00:00:00).
 
-In this tree, each value is a list or pairs `(KEY_ID, COUNT)`, which should be maintained ordered by COUNT to meet the performance requirements of the `/1/queries/popular/` API.
+   - Since we expect URLs to be duplicated in the log file, our data structure will maintain an index or URLs (a map URL -> ID)
 
-### Designing : round 2
-Hashtables support search, insert and delete operations with O(1) time, which beats O(log n).
+#### 3. Concerns
+At the eve of returning this home assignment, I'm concerned that the choice of extracting six keys for each date poses a huge memory problem.
+
+The other design I could have opted for would have been to simply use the dates as keys, but this would have increased the search response time (since each node no longer holds the whole information required to answer). And I believe the fastest response times are of paramount importance at Algolia.
+
+I've done a bit of calculation to measure the order of magnitudes at which both of these designs operate memory wise, extrapolating whole years of indexed data from the log file, and could not find a deciding factor for one or the other.
+
+##### Footnotes
+<sup>1</sup> : granted, this falls under the category of over-engineering and is not required to complete the assignment.
