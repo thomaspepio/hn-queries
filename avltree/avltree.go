@@ -9,10 +9,10 @@ const (
 	LeftChild  NodeType = "leftChild"
 	RightChild NodeType = "rightChild"
 
-	rightRight    rebalancingStrategy = "rightright" // insert at the right side, balance factor >= 2
-	leftleft      rebalancingStrategy = "leftleft"   // insert at the left side, balance factor <= -2
-	rightleft     rebalancingStrategy = "rightleft"  // insert at the right side, balance factor <= -2
-	leftright     rebalancingStrategy = "leftright"  // insert at the left side, balance factor >= 2
+	rightRight    rebalancingStrategy = "rightright"
+	leftleft      rebalancingStrategy = "leftleft"
+	rightleft     rebalancingStrategy = "rightleft"
+	leftright     rebalancingStrategy = "leftright"
 	noRebalancing rebalancingStrategy = "none"
 )
 
