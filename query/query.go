@@ -5,8 +5,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/thomaspepio/hn-queries/avltree"
-	"github.com/thomaspepio/hn-queries/constant"
 	"github.com/thomaspepio/hn-queries/index"
 	"github.com/thomaspepio/hn-queries/util"
 )
@@ -106,32 +104,9 @@ func PerformSearch(index *index.Index, datePrefix string, keyType util.KeyType) 
 			return nil, errors.New("Could not parse datePrefix : " + datePrefix)
 		}
 
-		lowerKey := util.MinuteKey(lower)
-		higherKey := lowerKey + 60
-
-		treeBetween := index.Tree.Between(lowerKey, higherKey)
-		return mostGeneralTreeValue(treeBetween), nil
+		key = util.MinuteKey(lower)
+		return index.Tree.Get(key), nil
 	}
 
 	return nil, errors.New("No key was extracted. This is an error")
-}
-
-func splitter(r rune) bool {
-	return r == constant.DashRune || r == constant.SpaceRune || r == constant.ColonRune
-}
-
-func mostGeneralTreeValue(tree *avltree.AVLTree) map[int]int {
-	if tree == nil {
-		return nil
-	}
-
-	var result map[int]int
-
-	if tree.Left == nil {
-		result = tree.Values
-	} else {
-		result = mostGeneralTreeValue(tree.Left)
-	}
-
-	return result
 }

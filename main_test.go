@@ -4,6 +4,6 @@ import (
 	"testing"
 )
 
-func Test_LaunchMain(t *testing.T) {
+func shutdownTest_LaunchMain(t *testing.T) {
 	main()
 }
